@@ -4,7 +4,7 @@ from settings import (
     _hash_password,
     _ensure_okay
 )
-from settings.errors import FailedCall
+from settings.errors import FailedCall, InvalidCall
 from unittest import TestCase
 from helper_funcs import (
     build,
@@ -38,7 +38,7 @@ class TestSettingsFuncs(TestCase):
 class TestAuthenticationAndDefaultEnvs(
     TestCase,
     TestRaisesLoggedOutMixin,
-    TestFailureIsReturnedMixin
+    TestFailureIsReturnedMixin,
 ):
     """
     This class the the authentication for the library.
@@ -142,30 +142,178 @@ class TestAuthenticationAndDefaultEnvs(
 class TestAuthEnvironments(
     TestCase,
     TestRaisesLoggedOutMixin,
-    TestFailureIsReturnedMixin
+    TestFailureIsReturnedMixin,
 ):
     def setUp(self):
         self.url = 'http://not.a.real.url/api/'
-        self.username = 'test_user'
+        self.name = 'test_user'
         self.password = ''
-        self.settings = Settings(self.url, self.username, self.password)
+        with patch('requests.Session.post') as post:
+            with patch('requests.Session.get') as get:
+                post.return_value = build()
+                get.return_value = build(update={'value': 'dev'})
+                self.settings = Settings(self.url, self.name, self.password)
 
-    def test_can_get_environment(self):
+    @patch('requests.Session.get')
+    def test_can_get_environment(self, get):
         """
         A user is able to get details for an environment
         """
-        self.assertTrue(False)
+        get.return_value = build(
+            update={'Users': {'test_user': 4, 'user2': 1, 'guest': 1}}
+        )
+        env_users = self.settings.get_env('dev')
 
-        call = lambda x: self.settings.get_env('dev')
-        self.failed_call_honored(call, 'Session.get')
+        self.assertEqual(3, len(env_users))
+        self.assertIn('test_user', env_users)
+        self.assertEqual(4, env_users['test_user'])
+
+        call = lambda: self.settings.get_env('dev')
+        self.failed_call_honored(call, 'requests.Session.get')
         self.logout_honored(call, self.settings)
 
-    def test_can_create_environment(self):
+    @patch('requests.Session.post')
+    def test_can_create_environment(self, post):
         """
         A user is able to create an environment
         """
-        self.assertTrue(False)
+        post.return_value = build()
+        self.settings.create_env('dev2')
+        post.assert_called_once_with(self.url + 'auth/env/dev2/')
 
-        call = lambda x: self.settings.create_env('dev')
-        self.failed_call_honored(call, 'Session.post')
+        call = lambda: self.settings.create_env('dev')
+        self.failed_call_honored(call, 'requests.Session.post')
+        self.logout_honored(call, self.settings)
+
+
+class TestAuthUsers(
+    TestCase,
+    TestRaisesLoggedOutMixin,
+    TestFailureIsReturnedMixin,
+):
+    def setUp(self):
+        self.url = 'http://not.a.real.url/api/'
+        self.name = 'test_user'
+        self.password = ''
+        with patch('requests.Session.post') as post:
+            with patch('requests.Session.get') as get:
+                post.return_value = build()
+                get.return_value = build(update={'value': 'dev'})
+                self.settings = Settings(self.url, self.name, self.password)
+
+    @patch('requests.Session.get')
+    def test_get_user(self, get):
+        """
+        Get information about a user, his permissions on all environments
+        """
+        get.return_value = build(update={
+            'Environments': {'dev': 4, 'auto': 1, 'users': 1}
+        })
+        rights = self.settings.get_user('test_user')
+
+        self.assertEqual(3, len(rights))
+        self.assertIn('dev', rights)
+        self.assertEqual(4, rights['dev'])
+
+        get.asssert_called_once_with(self.url + 'auth/user/test_user/')
+        call = lambda: self.settings.get_user('test_user')
+        self.failed_call_honored(call, 'requests.Session.get')
+        self.logout_honored(call, self.settings)
+
+    @patch('requests.Session.post')
+    def test_create_user(self, post):
+        """
+        Create a user
+        """
+        post.return_value = build()
+        self.settings.create_user('user2', '')
+        auth_url = self.url + 'auth/user/user2/'
+        post.assert_called_with(auth_url, data={'passhash': ''})
+
+        self.settings.create_user('user2', 'abc')
+        abc_hash = _hash_password('abc')
+        post.assert_called_with(auth_url, data={'passhash': abc_hash})
+
+        call = lambda: self.settings.create_user('user2', 'abc')
+        self.failed_call_honored(call, 'requests.Session.post')
+        self.logout_honored(call, self.settings)
+
+    @patch('requests.Session.put')
+    def test_update_password(self, put):
+        """
+        Update your own password
+        """
+        put.return_value = build()
+        self.settings.update_password('')
+        auth_url = self.url + 'auth/user/' + self.name + '/'
+        put.assert_called_with(auth_url, data={'passhash': ''})
+
+        self.settings.update_password('abc')
+        abc_hash = _hash_password('abc')
+        put.assert_called_with(auth_url, data={'passhash': abc_hash})
+
+        call = lambda: self.settings.update_password('abc')
+        self.failed_call_honored(call, 'requests.Session.put')
+        self.logout_honored(call, self.settings)
+
+    @patch('requests.Session.delete')
+    def test_delete_user(self, delete):
+        """
+        Delete a user
+        """
+        delete.return_value = build()
+        self.settings.delete_user('other_user')
+        auth_url = self.url + 'auth/user/other_user/'
+        delete.assert_called_once_with(auth_url)
+
+        call = lambda: self.settings.delete_user('other_user')
+        self.failed_call_honored(call, 'requests.Session.delete')
+        self.logout_honored(call, self.settings)
+
+
+class TestAuthGrant(
+    TestCase,
+    TestFailureIsReturnedMixin,
+    TestRaisesLoggedOutMixin
+):
+    def setUp(self):
+        self.url = 'http://not.a.real.url/api/'
+        self.name = 'test_user'
+        self.password = ''
+        with patch('requests.Session.post') as post:
+            with patch('requests.Session.get') as get:
+                post.return_value = build()
+                get.return_value = build(update={'value': 'dev'})
+                self.settings = Settings(self.url, self.name, self.password)
+
+    def test_grant_rights_validation(self):
+        """
+        Rights should be a value of 0, 1, 2, 3, or 4
+        """
+        with self.assertRaises(InvalidCall):
+            self.settings.grant_rights('dev', 1, 0)
+        with self.assertRaises(InvalidCall):
+            self.settings.grant_rights(1, 'abc', 0)
+        with self.assertRaises(InvalidCall):
+            self.settings.grant_rights('dev', 'abc', 5)
+        with self.assertRaises(InvalidCall):
+            self.settings.grant_rights('dev', 'abc', -1)
+        with self.assertRaises(InvalidCall):
+            self.settings.grant_rights('dev', 'abc', 1.1)
+
+    @patch('requests.Session.post')
+    def test_grant_rights(self, post):
+        post.return_value = build()
+        self.settings.grant_rights('dev', 'abc', 2)
+
+        post.assert_called_once_with(
+            self.url + 'auth/grant/',
+            data={
+                'env': 'dev',
+                'user': 'abc',
+                'rights': 2
+            }
+        )
+        call = lambda: self.settings.grant_rights('dev', 'abc', 2)
+        self.failed_call_honored(call, 'requests.Session.post')
         self.logout_honored(call, self.settings)

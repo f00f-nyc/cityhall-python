@@ -4,3 +4,7 @@ class NotLoggedIn(Exception):
 
 class FailedCall(Exception):
     pass
+
+
+class InvalidCall(FailedCall):
+    pass
