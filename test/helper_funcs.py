@@ -13,7 +13,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 from mock import MagicMock, patch
-from settings.errors import NotLoggedIn, FailedCall
+from cityhall.errors import NotLoggedIn, FailedCall
 
 
 def build(reply='Ok', message=None, status_code=200, update=None):
@@ -45,7 +45,7 @@ class TestRaisesLoggedOutMixin(object):
 
     def logout_honored(self, call, settings):
         """
-        For the settings object, the lambda call() should raise NotLoggedIn
+        For the cityhall object, the lambda call() should raise NotLoggedIn
         if the user is logged out.
         """
         with patch('requests.Session.delete') as delete:
@@ -66,7 +66,7 @@ class TestFailureIsReturnedMixin(object):
         For the lambda call() which wraps a request mocked_call, if the
         result is a failure, that should be returned.
 
-        :param call: What is to be called.  E.x. lambda x: settings.get('/val')
+        :param call: What is to be called.  E.x. lambda x: cityhall.get('/val')
         :param mocked_call: What it actually wraps.  E.x. 'Settings.get'
         """
         with patch(mocked_call) as mocked:

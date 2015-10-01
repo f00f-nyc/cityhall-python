@@ -12,13 +12,13 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-from settings import (
+from cityhall import (
     Settings,
     _sanitize_url,
     _hash_password,
     _ensure_okay
 )
-from settings.errors import FailedCall, InvalidCall
+from cityhall.errors import FailedCall, InvalidCall
 from unittest import TestCase
 from helper_funcs import (
     build,
@@ -63,7 +63,7 @@ class TestAuthenticationAndDefaultEnvs(
         self.username = 'test_user'
 
     @patch('requests.Session.get')
-    @patch('settings.requests.Session.post')
+    @patch('requests.Session.post')
     def test_no_password_is_honored(self, post, get):
         """
         By convention, no password passes an empty string
@@ -79,7 +79,7 @@ class TestAuthenticationAndDefaultEnvs(
         )
 
     @patch('requests.Session.get')
-    @patch('settings.requests.Session.post')
+    @patch('requests.Session.post')
     def test_password_is_hashed(self, post, get):
         """
         A password is passed in as plaintext and is hashed before the post
@@ -95,7 +95,7 @@ class TestAuthenticationAndDefaultEnvs(
         )
 
     @patch('requests.Session.get')
-    @patch('settings.requests.Session.post')
+    @patch('requests.Session.post')
     def test_default_env_is_retrieved(self, post, get):
         """
         Upon logging in, the default environment is retrieved
@@ -115,7 +115,7 @@ class TestAuthenticationAndDefaultEnvs(
 
     @patch('requests.Session.delete')
     @patch('requests.Session.get')
-    @patch('settings.requests.Session.post')
+    @patch('cityhall.requests.Session.post')
     def test_logging_out(self, post, get, delete):
         """
         Logging out hits the correct url

@@ -12,14 +12,8 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-from settings import (
-    Settings,
-    _sanitize_url,
-    _hash_password,
-    _ensure_okay,
-    _validate_path
-)
-from settings.errors import FailedCall, InvalidCall
+from cityhall import Settings, _validate_path
+from cityhall.errors import InvalidCall
 from unittest import TestCase
 from helper_funcs import (
     build,
@@ -235,7 +229,6 @@ class TestEnv(
         call = lambda: self.settings.set('dev', '/abc', '', 1000)
         self.failed_call_honored(call, 'requests.Session.post')
         self.logout_honored(call, self.settings)
-
 
     @patch('requests.Session.post')
     def test_set_override(self, post):
