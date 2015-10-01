@@ -1,3 +1,17 @@
+# Copyright 2015 Digital Borderlands Inc.
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Affero General Public License, version 3,
+# as published by the Free Software Foundation.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Affero General Public License for more details.
+#
+# You should have received a copy of the GNU Affero General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
 import requests
 from errors import NotLoggedIn, FailedCall, InvalidCall
 import hashlib
@@ -30,6 +44,11 @@ def _ensure_okay(resp):
     if ret['Response'] == 'Ok':
         return ret
     raise FailedCall(ret.get('Message', 'No message given for failure'))
+
+
+def _validate_path(path):
+    if path[0] != '/' or path.find(' ') > 0:
+        raise InvalidCall("Given path is invalid")
 
 
 class Settings(object):
@@ -204,27 +223,43 @@ class Settings(object):
         resp = self.session.post(grant_url, data=payload)
         _ensure_okay(resp)
 
-    def get(self, path, env=None):
-        if self.logged_in:
-            env = env or 'dev'
-            get_url = self.url + 'env/' + env + path
-            resp = requests.get(get_url, cookies=self.cookies)
-            return resp.json()
+    def _get_raw(self, env, path, params):
+        _validate_path(path)
+        self._ensure_logged_in()
+        env = env or self.default_env
+        get_url = _sanitize_url(self.url + 'env/' + env + path)
+        resp = self.session.get(get_url, params=params)
+        return _ensure_okay(resp)
 
+    def get(self, path, env=None, override=None, view_raw=False):
+        params = None if override is None else {'override': override}
+        json = self._get_raw(env, path, params)
+        return json if view_raw else json['value']
 
-def session_attempt():
-    url = 'http://digital-borderlands.herokuapp.com/api/'
-    with requests.Session() as session:
-        url = _sanitize_url(url)
-        auth_url = url + 'auth/'
-        data = {'username': 'alex', 'passhash': ''}
-        ret = session.post(auth_url, data=data)
+    def get_history(self, path, env=None, override=None):
+        params = {} if override is None else {'override': override}
+        params['viewhistory'] = True
+        json = self._get_raw(env, path, params)
+        return json['History']
 
-        if ret.status_code == 200 and ret.json()['Response'] == 'Ok':
-            get_url = url + 'env/dev/Calculator1/test/'
-            resp = session.get(get_url)
-            ret = resp.json()
-            session.delete(auth_url)
-            return ret
+    def get_children(self, path, env=None, override=None):
+        params = {} if override is None else {'override': override}
+        params['viewchildren'] = True
+        json = self._get_raw(env, path, params)
+        return json['children']
 
-        raise NotLoggedIn()
+    def _set_raw(self, env, path, override, payload):
+        _validate_path(path)
+        self._ensure_logged_in()
+        set_url = _sanitize_url(self.url + 'env/' + env + path)
+        params = {'override': override}
+        resp = self.session.post(set_url, data=payload, params=params)
+        _ensure_okay(resp)
+
+    def set(self, env, path, override, value):
+        payload = {'value': value}
+        self._set_raw(env, path, override, payload)
+
+    def set_protect(self, env, path, override, protect):
+        payload = {'protect': protect}
+        self._set_raw(env, path, override, payload)
