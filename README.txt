@@ -16,7 +16,7 @@ This is the python library for City Hall Enterprise Settings Server
 
  from cityhall import Settings
  
- cityhallSettings = Settings(username, password) - Must be called to 
+ cityhallSettings = Settings(url, user, password) - Must be called to 
      initiate a session with City Hall. The password should be in 
      plaintext, it will be hashed by the library.
  
