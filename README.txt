@@ -28,4 +28,11 @@ This is the python library for City Hall Enterprise Settings Server
 
  For more in depth information about this library, please check the wiki.
 
+
+ LICENSE
+
+  City Hall source files are made available under the terms of the GNU Affero General Public License (AGPL).
+
+
+
      
