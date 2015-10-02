@@ -23,3 +23,7 @@ class FailedCall(Exception):
 
 class InvalidCall(FailedCall):
     pass
+
+
+class NoDefaultEnv(FailedCall):
+    pass

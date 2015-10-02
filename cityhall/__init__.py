@@ -13,7 +13,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import requests
-from errors import NotLoggedIn, FailedCall, InvalidCall
+from errors import NotLoggedIn, FailedCall, InvalidCall, NoDefaultEnv
 import hashlib
 from six import text_type
 
@@ -227,6 +227,8 @@ class Settings(object):
         _validate_path(path)
         self._ensure_logged_in()
         env = env or self.default_env
+        if env is None:
+            raise NoDefaultEnv()
         get_url = _sanitize_url(self.url + 'env/' + env + path)
         resp = self.session.get(get_url, params=params)
         return _ensure_okay(resp)

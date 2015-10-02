@@ -13,7 +13,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 from cityhall import Settings, _validate_path
-from cityhall.errors import InvalidCall
+from cityhall.errors import InvalidCall, NoDefaultEnv
 from unittest import TestCase
 from helper_funcs import (
     build,
@@ -260,3 +260,8 @@ class TestEnv(
         post_url = self.url + 'env/dev/abc/'
         params = {'override': self.name}
         post.assert_called_once_with(post_url, data=payload, params=params)
+
+    def test_no_default_env_raises_NoDefaultEnv(self):
+        self.settings.default_env = None
+        with self.assertRaises(NoDefaultEnv):
+            self.settings.get('/some_value')
