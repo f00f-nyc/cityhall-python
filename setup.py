@@ -15,7 +15,7 @@ setup(
     author = 'Alex Popa',
     author_email = 'alex.popa@digitalborderlands.com',
     url = 'https://github.com/f00f-nyc/cityhall-python',
-    download_url = 'https://codeload.github.com/f00f-nyc/cityhall-python/legacy.tar.gz/v0.0.6',
+    download_url = 'https://codeload.github.com/f00f-nyc/cityhall-python/legacy.tar.gz/v0.0.10',
     install_requires=['requests==2.7.0','six==1.9.0'],
     keywords = ['cityhall', 'enterprise settings', 'settings', 'settings server', 'cityhall', 'City Hall'],
     test_suite='test',
